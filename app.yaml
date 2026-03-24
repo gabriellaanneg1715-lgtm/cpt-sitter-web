@@ -1,0 +1,17 @@
+runtime: nodejs20
+
+env_variables:
+  NODE_ENV: production
+
+# This explicitly defines the static handlers for App Engine.
+# The files in the 'dist' directory will be served directly by App Engine's highly optimized static servers.
+handlers:
+  # Serve all static asset files (with file extensions) directly
+  - url: /(.*\..+)$
+    static_files: dist/\1
+    upload: dist/(.*\..+)$
+
+  # Catch-all: serve index.html for any other route (supports React SPA client-side routing)
+  - url: /.*
+    static_files: dist/index.html
+    upload: dist/index.html
