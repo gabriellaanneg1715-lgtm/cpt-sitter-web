@@ -17,7 +17,7 @@ import {
   Dog,
   Mail
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Lenis from "lenis";
 import Chatbot from "./components/Chatbot";
 
