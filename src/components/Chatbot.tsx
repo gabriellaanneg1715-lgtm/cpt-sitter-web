@@ -3,8 +3,19 @@ import { motion, AnimatePresence } from "motion/react";
 import { MessageSquare, X, Send, Loader2 } from "lucide-react";
 import { GoogleGenAI } from "@google/genai";
 
-// Initialize the Gemini API client
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// Lazy initialize the Gemini API client
+let ai: GoogleGenAI | null = null;
+const getAI = () => {
+  if (!ai) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.error("GEMINI_API_KEY is missing. Chatbot will not function.");
+      return null;
+    }
+    ai = new GoogleGenAI({ apiKey });
+  }
+  return ai;
+};
 
 type Message = {
   id: string;
@@ -30,8 +41,9 @@ export default function Chatbot() {
 
   useEffect(() => {
     // Initialize chat session once
-    if (!chatRef.current) {
-      chatRef.current = ai.chats.create({
+    const aiClient = getAI();
+    if (aiClient && !chatRef.current) {
+      chatRef.current = aiClient.chats.create({
         model: "gemini-3-flash-preview",
         config: {
           systemInstruction: "You are Chip, Gabby's cat. You act as a helpful assistant for 'Cape Town Sitter', a pet sitting and house sitting business run by your owner, Gabby, in Cape Town. You answer general queries about pet sitting, house sitting, dog walking, and the services provided. Be friendly, playful, and use cat-like phrases (like meow or purr) often! Keep responses concise. If someone asks for contact info, provide it underneath your message as a list. IMPORTANT: Do NOT use markdown formatting like asterisks (*). Use plain text. Format the contact details exactly like this on separate lines:\n- Phone: 066 186 3886\n- Email: gabby@capetownsitter.co.za",
