@@ -1,21 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { MessageSquare, X, Send, Loader2 } from "lucide-react";
-import { GoogleGenAI } from "@google/genai";
-
-// Lazy initialize the Gemini API client
-let ai: GoogleGenAI | null = null;
-const getAI = () => {
-  if (!ai) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.error("GEMINI_API_KEY is missing. Chatbot will not function.");
-      return null;
-    }
-    ai = new GoogleGenAI({ apiKey });
-  }
-  return ai;
-};
 
 type Message = {
   id: string;
@@ -35,22 +20,6 @@ export default function Chatbot() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
-  // Store the chat session
-  const chatRef = useRef<any>(null);
-
-  useEffect(() => {
-    // Initialize chat session once
-    const aiClient = getAI();
-    if (aiClient && !chatRef.current) {
-      chatRef.current = aiClient.chats.create({
-        model: "gemini-3-flash-preview",
-        config: {
-          systemInstruction: "You are Chip, Gabby's cat. You act as a helpful assistant for 'Cape Town Sitter', a pet sitting and house sitting business run by your owner, Gabby, in Cape Town. You answer general queries about pet sitting, house sitting, dog walking, and the services provided. Be friendly, playful, and use cat-like phrases (like meow or purr) often! Keep responses concise. If someone asks for contact info, provide it underneath your message as a list. IMPORTANT: Do NOT use markdown formatting like asterisks (*). Use plain text. Format the contact details exactly like this on separate lines:\n- Phone: 066 186 3886\n- Email: gabby@capetownsitter.co.za",
-        },
-      });
-    }
-  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -73,21 +42,35 @@ export default function Chatbot() {
       text: userText,
     };
     
+    // Pass the history excluding the very first greeting if desired, or include it.
+    // We'll pass the current messages as history.
+    const history = [...messages];
+    
     setMessages((prev) => [...prev, newUserMessage]);
     setIsLoading(true);
 
     try {
-      if (!chatRef.current) {
-        throw new Error("Chat session not initialized");
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: userText,
+          history: history.filter(msg => msg.id !== "1") // Exclude initial greeting from history to save tokens
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to get response");
       }
 
-      // Send the message using the existing chat session
-      const response = await chatRef.current.sendMessage({ message: userText });
+      const data = await response.json();
       
       const newModelMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "model",
-        text: response.text || "I'm sorry, I couldn't process that request.",
+        text: data.text || "I'm sorry, I couldn't process that request.",
       };
       
       setMessages((prev) => [...prev, newModelMessage]);
