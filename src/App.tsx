@@ -17,7 +17,9 @@ import {
   Dog,
   Mail
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Lenis from "lenis";
+import Chatbot from "./components/Chatbot";
 
 const services = [
   {
@@ -54,6 +56,57 @@ const testimonials = [
 
 export default function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    service: "Pet Sitting",
+    message: ""
+  });
+
+  useEffect(() => {
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      orientation: 'vertical',
+      gestureOrientation: 'vertical',
+      smoothWheel: true,
+      wheelMultiplier: 1,
+      touchMultiplier: 2,
+    });
+
+    function raf(time: number) {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    }
+
+    requestAnimationFrame(raf);
+
+    const handleAnchorClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const anchor = target.closest('a');
+      if (!anchor) return;
+      
+      const href = anchor.getAttribute('href');
+      if (href?.startsWith('#')) {
+        e.preventDefault();
+        lenis.scrollTo(href, { offset: -100 });
+      }
+    };
+
+    document.addEventListener('click', handleAnchorClick);
+
+    return () => {
+      document.removeEventListener('click', handleAnchorClick);
+      lenis.destroy();
+    };
+  }, []);
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const subject = encodeURIComponent(`New Inquiry from ${formData.name} - ${formData.service}`);
+    const body = encodeURIComponent(`Name: ${formData.name}\nEmail: ${formData.email}\nService: ${formData.service}\n\nMessage:\n${formData.message}`);
+    window.location.href = `mailto:gabby@capetownsitter.co.za?subject=${subject}&body=${body}`;
+  };
 
   return (
     <div className="min-h-screen selection:bg-accent selection:text-bg">
@@ -248,20 +301,38 @@ export default function App() {
               </div>
             </div>
             
-            <form className="space-y-8" onSubmit={(e) => e.preventDefault()}>
+            <form className="space-y-8" onSubmit={handleFormSubmit}>
               <div className="grid md:grid-cols-2 gap-8">
                 <div className="space-y-2">
                   <label className="text-[10px] uppercase tracking-widest font-bold opacity-40 ml-4">Full Name</label>
-                  <input type="text" className="input-warm" placeholder="Your Name" />
+                  <input 
+                    type="text" 
+                    className="input-warm" 
+                    placeholder="Your Name" 
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] uppercase tracking-widest font-bold opacity-40 ml-4">Email Address</label>
-                  <input type="email" className="input-warm" placeholder="hello@example.com" />
+                  <input 
+                    type="email" 
+                    className="input-warm" 
+                    placeholder="hello@example.com" 
+                    required
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  />
                 </div>
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] uppercase tracking-widest font-bold opacity-40 ml-4">Service Required</label>
-                <select className="input-warm appearance-none">
+                <select 
+                  className="input-warm appearance-none"
+                  value={formData.service}
+                  onChange={(e) => setFormData({...formData, service: e.target.value})}
+                >
                   <option>Pet Sitting</option>
                   <option>House Sitting</option>
                   <option>Dog Walking</option>
@@ -269,7 +340,14 @@ export default function App() {
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] uppercase tracking-widest font-bold opacity-40 ml-4">Tell me more</label>
-                <textarea rows={4} className="input-warm resize-none" placeholder="Tell me about your pets and your needs..."></textarea>
+                <textarea 
+                  rows={4} 
+                  className="input-warm resize-none" 
+                  placeholder="Tell me about your pets and your needs..."
+                  required
+                  value={formData.message}
+                  onChange={(e) => setFormData({...formData, message: e.target.value})}
+                ></textarea>
               </div>
               <button type="submit" className="btn-warm w-full py-6 text-lg">Send Inquiry</button>
             </form>
@@ -318,6 +396,8 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      <Chatbot />
     </div>
   );
 }
